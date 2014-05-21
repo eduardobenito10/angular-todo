@@ -5,25 +5,35 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>Angular TODO app</title>
 	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+	<link rel="stylesheet" href="bower_components/jquery-simplecolorpicker/jquery.simplecolorpicker.css">
 </head>
 <body ng-controller="mainController">
 	<div class="container">
 		<!--Cabecera-->
 		<div class="jumbotron text-center">
-			<h1>Angular TODO List <span class="label label-info">{{ todos.length }}</span></h1>
+			<h1>Backlog Ibérico<span class="label label-info">{{ todos.length }}</span></h1>
 		</div>
 
 		<!--Lista de Todos-->
 		<div id="todo-list" class="row">
-			<div class="col-sm-4 col-sm-offset-4">
-				<div class="checkbox" ng-repeat="todo in todos">
-					<label>
-						<input type="checkbox" ng-click="deleteTodo(todo._id)"> 
-						{{ todo.text }}
-					</label>
-				</div>
-			</div>
+			Filter: <input ng-model="query">
+			<ul ui-sortable="sortableOptions" ng:model="todos" class="col-sm-4 col-sm-offset-4">
+					<li class="checkbox" ng-repeat="todo in todos | filter:query">
+						<label style="background-color:{{ todo.color }}">
+							<input type="checkbox" ng-model="todo.completed" ng-change="completeTodo(todo._id, todo.completed)"> </input>
+									<span ng-if="todo.completed == true">
+										<del>{{ todo.text }}</del>
+									</span>
+									<span ng-if="todo.completed == false">
+										{{todo.text}}
+									</span>
+										<span ng-click="deleteTodo(todo._id)">X</span>
+									
+						</label>
+					</li>
+			</ul>
 		</div>
+		<span ng-click="sortableOptions.disabled = true;">DISABLE</span>
 
 		<!--Formulario para insertar nuevos Todo-->
 		<div id="todo-form" class="row">
@@ -33,6 +43,20 @@
 						<input type="text" class="form-control input-lg text-center" 
 								placeholder="Inserta una tarea nueva"
 								ng-model="formData.text">
+						<select name="colorpicker" ng-model="formData.color">
+						  <option value="#7bd148">Green</option>
+						  <option value="#5484ed">Bold blue</option>
+						  <option value="#a4bdfc">Blue</option>
+						  <option value="#46d6db">Turquoise</option>
+						  <option value="#7ae7bf">Light green</option>
+						  <option value="#51b749">Bold green</option>
+						  <option value="#fbd75b">Yellow</option>
+						  <option value="#ffb878">Orange</option>
+						  <option value="#ff887c">Red</option>
+						  <option value="#dc2127">Bold red</option>
+						  <option value="#dbadff">Purple</option>
+						  <option value="#e1e1e1">Gray</option>
+						</select>
 					</div>
 					<button class="btn btn-primary btn-lg" ng-click="createTodo()">Añadir</button>
 				</form>
@@ -41,7 +65,13 @@
 	</div>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.min.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.12/angular.min.js"></script>
+	<script src="bower_components/jquery-simplecolorpicker/jquery.simplecolorpicker.js"></script>
+  <script src="https://rawgithub.com/angular-ui/ui-sortable/master/src/sortable.js"></script>
 	<script src="main.js"></script>
+	<script>
+	$('select[name="colorpicker"]').simplecolorpicker();
+	</script>
 </body>
 </html>

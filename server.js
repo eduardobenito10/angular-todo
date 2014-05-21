@@ -3,13 +3,51 @@
 var express 	= require('express');
 var app 		= express();
 var mongoose 	= require('mongoose');
+var passport	= require('passport')
+  , LocalStrategy = require('passport-local').Strategy;
+var flash = require('connect-flash');
+var ObjectId = require('mongoose').Types.ObjectId; 
+
+passport.use(new LocalStrategy(
+  function(username, password, done) {
+    User.findOne({ username: username }, function(err, user) {
+      if (err) { return done(err); }
+      if (!user) {
+        return done(null, false, { message: 'Incorrect username.' });
+      }
+      if (user.password != password) {
+        return done(null, false, { message: 'Incorrect password.' });
+      }
+      return done(null, user);
+    });
+  }
+));
+
+passport.serializeUser(function(user, done) {
+  done(null, user);
+});
+
+passport.deserializeUser(function(user, done) {
+  done(null, user);
+});
 
 // Conexión con la base de datos
-mongoose.connect('mongodb://localhost:27017/angular-todo');
+//mongoose.connect('mongodb://localhost:27017/angular-todo');
+mongoose.connect('mongodb://eduardobenito10:1234@ds061938.mongolab.com:61938/angular-todo');
 
 // Definición de modelos
 var Todo = mongoose.model('Todo', {
-	text: String
+	text: String,
+	author: String,
+	priority: String,
+	color: String,
+	order: Number,
+	completed: Boolean
+});
+
+var User = mongoose.model('User', {
+	username: String,
+	password: String
 });
 
 // Configuración
@@ -18,11 +56,27 @@ app.configure(function() {
 	app.use(express.logger('dev'));						// Muestra un log de todos los request en la consola
 	app.use(express.bodyParser());						// Permite cambiar el HTML con el método POST
 	app.use(express.methodOverride());					// Simula DELETE y PUT
+	app.use( express.cookieParser() );
+	app.use(express.session({secret:'thisismysupersecret'}));
+	// Initialize Passport!  Also use passport.session() middleware, to support
+	// persistent login sessions (recommended).
+	app.use(flash());
+	app.use(passport.initialize());
+	app.use(passport.session());
 });
+
+// Autenticacion con Passport
+app.post('/login',
+  passport.authenticate('local', { successRedirect: '/',
+                                   failureRedirect: '/login',
+								   failureFlash: true })
+);
 
 // Rutas de nuestro API
 app.get('/api/todos', function(req, res) {				// GET de todos los TODOs
-	Todo.find(function(err, todos) {
+	Todo.find({},{},{sort:{
+        order: 1 //Sort by order
+    }},function(err, todos) {
 		if(err) {
 			res.send(err);
 		}
@@ -31,21 +85,45 @@ app.get('/api/todos', function(req, res) {				// GET de todos los TODOs
 });
 
 app.post('/api/todos', function(req, res) {				// POST que crea un TODO y devuelve todos tras la creación
-	Todo.create({
-		text: req.body.text,
-		done: false
-	}, function(err, todo){
-		if(err) {
-			res.send(err);
-		}
+	Todo.count({}, function( err, count){
+		Todo.create({
+			text: req.body.text,
+			color: req.body.color,
+			order: count,
+			priority: req.body.priority,
+			completed: false
+		}, function(err, todo){
+			if(err) {
+				res.send(err);
+			}
+			Todo.find({},{},{sort:{
+				order: 1 //Sort by order
+			}},function(err, todos) {
+				if(err){
+					res.send(err);
+				}
+				res.json(todos);
+			});
+		});
+	});
+});
 
-		Todo.find(function(err, todos) {
+app.put('/api/todos/:todo', function(req, res) {		// EDITA un TODO específico.
+		Todo.update({_id: new ObjectId(req.params.todo)}, req.body, {'multi':true}, function(err, todo) {
+        if(err){
+            res.send(err);
+        }
+
+		Todo.find({},{},{sort:{
+            order: 1 //Sort by order
+        }},function(err, todos) {
 			if(err){
 				res.send(err);
 			}
 			res.json(todos);
 		});
-	});
+
+	})
 });
 
 app.delete('/api/todos/:todo', function(req, res) {		// DELETE un TODO específico y devuelve todos tras borrarlo.
@@ -56,7 +134,9 @@ app.delete('/api/todos/:todo', function(req, res) {		// DELETE un TODO específi
 			res.send(err);
 		}
 
-		Todo.find(function(err, todos) {
+		Todo.find({},{},{sort:{
+            order: 1 //Sort by order
+        }},function(err, todos) {
 			if(err){
 				res.send(err);
 			}
@@ -66,12 +146,33 @@ app.delete('/api/todos/:todo', function(req, res) {		// DELETE un TODO específi
 	})
 });
 
-app.get('*', function(req, res) {						// Carga una vista HTML simple donde irá nuesta Single App Page
-	res.sendFile('./public/index.html');				// Angular Manejará el Frontend
+app.get('/', function(req, res) {						// Carga una vista HTML simple donde irá nuesta Single App Page
+	res.sendFile('./public/index.html', { user: req.user });				// Angular Manejará el Frontend
+});
+
+//app.get('/', function(req, res){
+  //res.render('index', { user: req.user });
+//});
+
+app.get('/account', ensureAuthenticated, function(req, res){
+  res.render('account', { user: req.user });
+});
+
+app.get('/login', function(req, res){
+  res.render('login', { user: req.user, message: req.flash('error') });
+});
+
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) { return next(); }
+  res.redirect('/login');
+}
+
+app.get('/logout', function(req, res){
+  req.logout();
+  res.redirect('/');
 });
 
 // Escucha y corre el server
 app.listen(8080, function() {
 	console.log('App listening on port 8080');
-});
-
+})
