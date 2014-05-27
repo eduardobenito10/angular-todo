@@ -1,7 +1,9 @@
 //server.js
 
 var express 	= require('express');
-var app 		= express();
+var app = express()
+  , server = require('http').createServer(app)
+  , io = require('socket.io').listen(server);
 var mongoose 	= require('mongoose');
 var passport	= require('passport')
   , LocalStrategy = require('passport-local').Strategy;
@@ -63,6 +65,8 @@ app.configure(function() {
 	app.use(flash());
 	app.use(passport.initialize());
 	app.use(passport.session());
+	app.use('/node_modules', 
+		express.static(__dirname  + '/node_modules'));
 });
 
 // Autenticacion con Passport
@@ -172,7 +176,24 @@ app.get('/logout', function(req, res){
   res.redirect('/');
 });
 
+app.get('/name', function(req, res){
+  res.json({
+    name: 'Bob'
+  });
+});
+
+// Socket.io Communication
+var conectados = 0;
+io.sockets.on('connection', function (socket) {
+  conectados++;
+  socket.emit('hello', { 'conectados': conectados });
+  socket.on('nuevo', function (data) {
+	io.sockets.emit('message', data.message );
+  });
+
+});
+
 // Escucha y corre el server
-app.listen(8080, function() {
-	console.log('App listening on port 8080');
+server.listen(3000, function() {
+	console.log('App listening on port 3000');
 })

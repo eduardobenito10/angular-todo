@@ -63,7 +63,27 @@
 			</div>
 		</div>
 	</div>
-
+	<script>
+	window.onload = function() {
+ 
+    var socket = io.connect('http://localhost:3000');
+ 
+    socket.on('hello', function (data) {
+        if(data.conectados) {
+			console.log('conectados='+data.conectados);
+        }
+    });
+    socket.on('message', function (data) {
+        if(data) {
+			console.log(data);
+        }
+    });
+ 
+    socket.emit('nuevo', { message: 'hola a todos' });
+}
+</script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.12/angular.min.js"></script>
